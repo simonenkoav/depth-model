@@ -115,8 +115,8 @@ def train():
     print('-' * 30)
     imgs, depths = load_train_data()
 
-    imgs = np.array(preprocess(imgs[:3]))
-    depths = np.array(preprocess(depths[:3]))
+    imgs = np.array(preprocess(imgs))
+    depths = np.array(preprocess(depths))
 
     depths = get_normal_depth(depths)
 

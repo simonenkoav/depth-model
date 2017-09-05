@@ -16,7 +16,11 @@ def load_train_data():
     depth_images = []
     rgb_images = []
     # do i need accelerometer files?
+    i = 0
     for frame in data:
+        i += 1
+        if i % 10000 == 0:
+            print("Data in process: frame " + str(i))
         image = cv2.imread(frame.rgb_filename)
         rgb_images.append(image)
         depth = cv2.imread(frame.depth_filename, flags=cv2.IMREAD_GRAYSCALE)
@@ -28,3 +32,4 @@ def load_train_data():
 
 def load_test_data():
     return [], []
+
