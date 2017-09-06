@@ -9,9 +9,8 @@ from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from keras.models import load_model
-import matplotlib.pyplot as plt
 
-from data import load_train_data, load_test_data
+from data import load_train_filenames, load_test_data
 
 import cv2
 
@@ -88,62 +87,95 @@ def get_unet():
     return model
 
 
-def preprocess(images):
-    for i in range(len(images)):
-        images[i] = cv2.resize(images[i], None, fx=0.2, fy=0.2, interpolation=cv2.INTER_LINEAR)
-        x_center = int(images[i].shape[0]/2)
-        y_center = int(images[i].shape[1]/2)
-        images[i] = images[i][x_center - delta_x: x_center + delta_x,
-                              y_center - delta_y: y_center + delta_y]
-    return images
+def preprocess(image):
+    image = cv2.resize(image, None, fx=0.2, fy=0.2, interpolation=cv2.INTER_LINEAR)
+    x_center = int(image.shape[0] / 2)
+    y_center = int(image.shape[1] / 2)
+    image = image[x_center - delta_x: x_center + delta_x,
+                y_center - delta_y: y_center + delta_y]
+    return image
 
 
-# not sure about this step
-def get_normal_depth(all_depths):  # all_depths - count_of_images * image_rows * image_cols
-    # return – new depths - count_of_images * image_rows * image_cols * 1 <- each vaue to array of 1 element
-    new_depths = np.zeros((all_depths.shape[0], all_depths.shape[1], all_depths.shape[2], 1))
-    for depth_index in range(len(all_depths)):
-        for row_i in range(len(all_depths[depth_index])):
-            for col_i in range(len(all_depths[depth_index][row_i])):
-                new_depths[depth_index][row_i][col_i][0] = all_depths[depth_index][row_i][col_i]
-    return new_depths
+def read_rgb_image(filename):
+    image = cv2.imread(filename)
+    image = preprocess(image)
+    return image
+
+
+def read_depth_image(filename):
+    image = cv2.imread(filename, flags=cv2.IMREAD_GRAYSCALE)
+    image = preprocess(image)
+    normal_depth = np.zeros((image.shape[0], image.shape[1], 1))
+    for row_i in range(len(image)):
+        for col_i in range(len(image[row_i])):
+            normal_depth[row_i][col_i][0] = image[row_i][col_i]
+    return normal_depth
+
+
+def read_sample(img_filenames):
+    image = read_rgb_image(img_filenames["image"])
+    depth = read_depth_image(img_filenames["depth"])
+    return image, depth
+
+
+def image_generator(data, read_sample, shuffle=False):
+    if shuffle:
+        np.random.shuffle(data)
+    for img_filenames in data:
+        img_real, depth_real = read_sample(img_filenames)
+        yield img_real, depth_real
+
+
+def batch_generator(img_generator, batch_size=32):
+    while True:
+        cur_batch = []
+        img_gen = img_generator()
+        for image, depth in img_gen:
+            cur_batch.append({"imput": image, "output": depth})
+            if len(cur_batch) == batch_size:
+                yield cur_batch
+                cur_batch = []
 
 
 def train():
     print('-' * 30)
     print('Loading and preprocessing train data...')
     print('-' * 30)
-    imgs, depths = load_train_data()
+    train_data = load_train_filenames()
 
-    imgs = np.array(preprocess(imgs))
-    depths = np.array(preprocess(depths))
+    img_generator = image_generator(train_data, read_sample, shuffle=True)
+    train_generator = batch_generator(img_generator)
 
-    depths = get_normal_depth(depths)
+    # imgs = np.array(preprocess(imgs))
+    # depths = np.array(preprocess(depths))
 
-    imgs = imgs.astype('float32')
-    mean = np.mean(imgs)  # mean for data centering
-    std = np.std(imgs)  # std for data normalization
+    # depths = get_normal_depth(depths)
 
-    imgs -= mean
-    imgs /= std
+    # imgs = imgs.astype('float32')
+    # mean = np.mean(imgs)  # mean for data centering
+    # std = np.std(imgs)  # std for data normalization
 
-    depths = depths.astype('float32')
-    depths /= 255.  # scale masks to [0, 1]
+    # imgs -= mean
+    # imgs /= std
+
+    # depths = depths.astype('float32')
+    # depths /= 255.  # scale masks to [0, 1]
 
     print('-' * 30)
     print('Creating and compiling model...')
     print('-' * 30)
     model = get_unet()
     print(str(model.summary()))
-    model_checkpoint = ModelCheckpoint('weights.h5', monitor='val_loss', save_best_only=True)
+    # model_checkpoint = ModelCheckpoint('weights.h5', monitor='val_loss', save_best_only=True)
 
     print('-' * 30)
     print('Fitting model...')
     print('-' * 30)
-    model.fit(imgs, depths, batch_size=32, nb_epoch=20, verbose=1, shuffle=True,
-              validation_split=0.2,
-              callbacks=[model_checkpoint])
+    # model.fit(imgs, depths, batch_size=32, nb_epoch=20, verbose=1, shuffle=True,
+    #           validation_split=0.2,
+    #           callbacks=[model_checkpoint])
 
+    model.fit_generator(train_generator, verbose=1)
     model.save(model_filename)
 
 
@@ -186,7 +218,7 @@ def train_and_predict():
     print('-'*30)
     print('Loading and preprocessing train data...')
     print('-'*30)
-    imgs_train, imgs_mask_train = load_train_data()
+    imgs_train, imgs_mask_train = load_train_filenames()
 
     imgs_train = preprocess(imgs_train)
     imgs_mask_train = preprocess(imgs_mask_train)

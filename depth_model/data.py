@@ -4,8 +4,8 @@ import cv2
 from scipy.misc import imread
 import numpy as np
 
-# main_path = "/storage/nyu_v2/"
-main_path = "/Users/imac05/Desktop/nyu_v2_examples/"
+main_path = "/storage/nyu_v2/"
+# main_path = "/Users/imac05/Desktop/nyu_v2_examples/"
 
 
 def load_train_data():
@@ -32,4 +32,16 @@ def load_train_data():
 
 def load_test_data():
     return [], []
+
+
+def load_train_filenames():
+    train_data = []
+    with open("all_frames_list.pkl", 'rb') as f:
+        data = pickle.load(f)
+
+    for d in data:
+        train_sample = {"image": d.rgb_filename, "depth": d.depth_filename}
+        train_data.append(train_sample)
+
+    return train_data
 
