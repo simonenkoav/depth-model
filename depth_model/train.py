@@ -12,6 +12,8 @@ from keras.models import load_model
 
 from data import load_train_filenames, load_test_data
 
+from sys import stdout
+
 import cv2
 
 K.set_image_data_format('channels_last')  # TF dimension ordering in this code
@@ -62,19 +64,19 @@ def get_unet():
     conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(pool4)
     conv5 = Conv2D(512, (3, 3), activation='relu', padding='same')(conv5)
 
-    up6 = concatenate([Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(conv5), conv4], axis=3)
+    up6 = concatenate(inputs=[Conv2DTranspose(256, (2, 2), strides=(2, 2), padding='same')(conv5), conv4], axis=3)
     conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(up6)
     conv6 = Conv2D(256, (3, 3), activation='relu', padding='same')(conv6)
 
-    up7 = concatenate([Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(conv6), conv3], axis=3)
+    up7 = concatenate(inputs=[Conv2DTranspose(128, (2, 2), strides=(2, 2), padding='same')(conv6), conv3], axis=3)
     conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(up7)
     conv7 = Conv2D(128, (3, 3), activation='relu', padding='same')(conv7)
 
-    up8 = concatenate([Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(conv7), conv2], axis=3)
+    up8 = concatenate(inputs=[Conv2DTranspose(64, (2, 2), strides=(2, 2), padding='same')(conv7), conv2], axis=3)
     conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(up8)
     conv8 = Conv2D(64, (3, 3), activation='relu', padding='same')(conv8)
 
-    up9 = concatenate([Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(conv8), conv1], axis=3)
+    up9 = concatenate(inputs=[Conv2DTranspose(32, (2, 2), strides=(2, 2), padding='same')(conv8), conv1], axis=3)
     conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(up9)
     conv9 = Conv2D(32, (3, 3), activation='relu', padding='same')(conv9)
 
@@ -97,24 +99,38 @@ def preprocess(image):
 
 
 def read_rgb_image(filename):
+    stdout.write("image filename = " + str(filename) + "\n")
+    stdout.flush()
     image = cv2.imread(filename)
+    stdout.write("image image = " + str(image) + "\n")
+    stdout.flush()
     image = preprocess(image)
+    stdout.write("image after preprocess = " + str(image) + "\n")
+    stdout.flush()
     return image
 
 
 def read_depth_image(filename):
+    stdout.write("depth filename = " + str(filename) + "\n")
+    stdout.flush()
     image = cv2.imread(filename, flags=cv2.IMREAD_GRAYSCALE)
+    stdout.write("depth image = " + str(image) + "\n")
+    stdout.flush()
     image = preprocess(image)
-    normal_depth = np.zeros((image.shape[0], image.shape[1], 1))
-    for row_i in range(len(image)):
-        for col_i in range(len(image[row_i])):
-            normal_depth[row_i][col_i][0] = image[row_i][col_i]
+    stdout.write("depth image after preprocess = " + str(image) + "\n")
+    stdout.flush()
+    normal_depth = image[:, :, np.newaxis]
+    stdout.write("normal_depth = " + str(normal_depth) + "\n")
+    stdout.flush()
     return normal_depth
 
 
 def read_sample(img_filenames):
     image = read_rgb_image(img_filenames["image"])
+    stdout.flush()
+    # depth = read_rgb_image(img_filenames["image"])
     depth = read_depth_image(img_filenames["depth"])
+    stdout.flush()
     return image, depth
 
 
@@ -128,13 +144,20 @@ def image_generator(data, read_sample, shuffle=False):
 
 def batch_generator(img_generator, batch_size=32):
     while True:
-        cur_batch = []
+        cur_batch_x = []
+        cur_batch_y = []
         img_gen = img_generator()
         for image, depth in img_gen:
-            cur_batch.append({"imput": image, "output": depth})
-            if len(cur_batch) == batch_size:
-                yield cur_batch
-                cur_batch = []
+            stdout.write("GEN image = " + str(image) + "\n")
+            stdout.flush()
+            stdout.write("GEN depth = " + str(depth) + "\n")
+            stdout.flush()
+            cur_batch_x.append(image)
+            cur_batch_y.append(depth)
+            if len(cur_batch_x) == batch_size:
+                yield (cur_batch_x, cur_batch_y)
+                cur_batch_x = []
+                cur_batch_y = []
 
 
 def train():
@@ -143,8 +166,14 @@ def train():
     print('-' * 30)
     train_data = load_train_filenames()
 
-    img_generator = image_generator(train_data, read_sample, shuffle=True)
-    train_generator = batch_generator(img_generator)
+    img_generator = lambda: image_generator(train_data, read_sample, shuffle=True)
+    # train_generator = batch_generator(img_generator, 38)
+    train_generator = batch_generator(img_generator, 2)
+
+    for val in train_generator:
+        stdout.write("val = " + str(val) + "\n")
+
+    quit()
 
     # imgs = np.array(preprocess(imgs))
     # depths = np.array(preprocess(depths))
@@ -175,7 +204,8 @@ def train():
     #           validation_split=0.2,
     #           callbacks=[model_checkpoint])
 
-    model.fit_generator(train_generator, verbose=1)
+    # model.fit_generator(train_generator, 2394, verbose=1)
+    model.fit_generator(train_generator, 1, verbose=1)
     model.save(model_filename)
 
 
