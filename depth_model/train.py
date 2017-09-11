@@ -9,6 +9,7 @@ from keras.optimizers import Adam
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from keras.models import load_model
+import matplotlib.pyplot as plt
 
 from data import load_train_filenames, load_test_data
 
@@ -89,6 +90,11 @@ def get_unet():
     return model
 
 
+def std_print(str):
+    stdout.write(str + "\n")
+    stdout.flush()
+
+
 def preprocess(image):
     image = cv2.resize(image, None, fx=0.2, fy=0.2, interpolation=cv2.INTER_LINEAR)
     x_center = int(image.shape[0] / 2)
@@ -99,38 +105,26 @@ def preprocess(image):
 
 
 def read_rgb_image(filename):
-    stdout.write("image filename = " + str(filename) + "\n")
-    stdout.flush()
     image = cv2.imread(filename)
-    stdout.write("image image = " + str(image) + "\n")
-    stdout.flush()
+    if image is None:
+        std_print("None image = " + str(filename))
     image = preprocess(image)
-    stdout.write("image after preprocess = " + str(image) + "\n")
-    stdout.flush()
     return image
 
 
 def read_depth_image(filename):
-    stdout.write("depth filename = " + str(filename) + "\n")
-    stdout.flush()
-    image = cv2.imread(filename, flags=cv2.IMREAD_GRAYSCALE)
-    stdout.write("depth image = " + str(image) + "\n")
-    stdout.flush()
+    image = cv2.imread(filename)
+    if image is None:
+        std_print("None image = " + str(filename))
     image = preprocess(image)
-    stdout.write("depth image after preprocess = " + str(image) + "\n")
-    stdout.flush()
-    normal_depth = image[:, :, np.newaxis]
-    stdout.write("normal_depth = " + str(normal_depth) + "\n")
-    stdout.flush()
+    normal_depth = image[:, :, 0]
+    normal_depth = normal_depth[:, :, np.newaxis]
     return normal_depth
 
 
 def read_sample(img_filenames):
     image = read_rgb_image(img_filenames["image"])
-    stdout.flush()
-    # depth = read_rgb_image(img_filenames["image"])
     depth = read_depth_image(img_filenames["depth"])
-    stdout.flush()
     return image, depth
 
 
@@ -143,21 +137,16 @@ def image_generator(data, read_sample, shuffle=False):
 
 
 def batch_generator(img_generator, batch_size=32):
-    while True:
-        cur_batch_x = []
-        cur_batch_y = []
-        img_gen = img_generator()
-        for image, depth in img_gen:
-            stdout.write("GEN image = " + str(image) + "\n")
-            stdout.flush()
-            stdout.write("GEN depth = " + str(depth) + "\n")
-            stdout.flush()
-            cur_batch_x.append(image)
-            cur_batch_y.append(depth)
-            if len(cur_batch_x) == batch_size:
-                yield (cur_batch_x, cur_batch_y)
-                cur_batch_x = []
-                cur_batch_y = []
+    cur_batch_x = []
+    cur_batch_y = []
+    img_gen = img_generator()
+    for image, depth in img_gen:
+        cur_batch_x.append(image)
+        cur_batch_y.append(depth)
+        if len(cur_batch_x) == batch_size:
+            yield (np.array(cur_batch_x), np.array(cur_batch_y))
+            cur_batch_x = []
+            cur_batch_y = []
 
 
 def train():
@@ -168,12 +157,12 @@ def train():
 
     img_generator = lambda: image_generator(train_data, read_sample, shuffle=True)
     # train_generator = batch_generator(img_generator, 38)
-    train_generator = batch_generator(img_generator, 2)
+    train_generator = batch_generator(img_generator, 4)
 
     for val in train_generator:
-        stdout.write("val = " + str(val) + "\n")
-
+        std_print("val = " + str(val))
     quit()
+    # train_generator = batch_generator(img_generator, 2)
 
     # imgs = np.array(preprocess(imgs))
     # depths = np.array(preprocess(depths))
@@ -205,7 +194,7 @@ def train():
     #           callbacks=[model_checkpoint])
 
     # model.fit_generator(train_generator, 2394, verbose=1)
-    model.fit_generator(train_generator, 1, verbose=1)
+    model.fit_generator(train_generator, 3, verbose=1)
     model.save(model_filename)
 
 

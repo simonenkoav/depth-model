@@ -36,7 +36,8 @@ def load_test_data():
 
 def load_train_filenames():
     train_data = []
-    with open("my_all_frames_list.pkl", 'rb') as f:
+    # with open("my_all_frames_list.pkl", 'rb') as f:
+    with open("all_frames_list.pkl", 'rb') as f:
         data = pickle.load(f)
 
     print(len(data))
@@ -46,4 +47,11 @@ def load_train_filenames():
         train_data.append(train_sample)
 
     return train_data
+
+
+def load_not_none():
+    with open("not_none_data.pkl", 'rb') as f:
+        data = pickle.load(f)
+
+    return data
 
