@@ -85,7 +85,7 @@ def get_unet():
 
     model = Model(inputs=[inputs], outputs=[conv10])
 
-    model.compile(optimizer=Adam(lr=1e-5), loss=dice_coef_loss, metrics=[dice_coef])
+    model.compile(optimizer=Adam(lr=1e-5), loss='mse')
 
     return model
 
@@ -106,19 +106,19 @@ def preprocess(image):
 
 def read_rgb_image(filename):
     image = cv2.imread(filename)
-    if image is None:
-        std_print("None image = " + str(filename))
     image = preprocess(image)
+    image = np.true_divide(image, 127)
+    image -= 1
     return image
 
 
 def read_depth_image(filename):
     image = cv2.imread(filename)
-    if image is None:
-        std_print("None image = " + str(filename))
     image = preprocess(image)
     normal_depth = image[:, :, 0]
     normal_depth = normal_depth[:, :, np.newaxis]
+    normal_depth = np.true_divide(normal_depth, 127)
+    normal_depth -= 1
     return normal_depth
 
 
@@ -194,7 +194,9 @@ def train():
     #           callbacks=[model_checkpoint])
 
     # model.fit_generator(train_generator, 2394, verbose=1)
-    model.fit_generator(train_generator, 3, verbose=1)
+    # model.fit_generator(train_generator, 3, verbose=1)
+    model.fit_generator(train_generator, 11300, verbose=1, epochs=10)
+    # model.fit(np.zeros((8,96,96,3)), np.zeros((8,96,96,1)))
     model.save(model_filename)
 
 
