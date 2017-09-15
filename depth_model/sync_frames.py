@@ -3,7 +3,7 @@ import glob
 import os
 import re
 import pickle
-
+# frameList("/storage/nyu_v2/dataset/bathroom_0001/")
 
 class Frame:
     time_diff = 0
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             frames_list[d_i].rgb_filename = cur_path + "/" + r_files[r_i]
             frames_list[d_i].accel_filename = cur_path + "/" + a_files[a_i]
 
-        with open(path + "_frames_list.pkl", 'wb') as f:
+        with open("test_" + path + "_frames_list.pkl", 'wb') as f:
             pickle.dump(frames_list, f, pickle.HIGHEST_PROTOCOL)
 
         # with open("frames_list.pkl", 'rb') as f:

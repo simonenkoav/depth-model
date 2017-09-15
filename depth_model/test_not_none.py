@@ -1,6 +1,7 @@
 import pickle
 
-with open("not_none_data.pkl", 'rb') as f:
+with open("files/test_not_none_data.pkl", 'rb') as f:
     data = pickle.load(f)
 
 print(len(data))
+

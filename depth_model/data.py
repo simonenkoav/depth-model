@@ -4,12 +4,13 @@ import cv2
 from scipy.misc import imread
 import numpy as np
 
-# main_path = "/storage/nyu_v2/"
-main_path = "/Users/imac05/Desktop/nyu_v2_examples/"
+main_path = "/storage/nyu_v2/"
+files_path = "files/"
+# main_path = "/Users/imac05/Desktop/nyu_v2_examples/"
 
 
 def load_train_data():
-    with open("all_frames_list.pkl", 'rb') as f:
+    with open(files_path + "frames_list.pkl", 'rb') as f:
         data = pickle.load(f)
         print(str(len(data)))
 
@@ -30,17 +31,12 @@ def load_train_data():
     return rgb_images, depth_images
 
 
-def load_test_data():
-    return [], []
-
-
 def load_train_filenames():
     train_data = []
-    # with open("my_all_frames_list.pkl", 'rb') as f:
-    with open("all_frames_list.pkl", 'rb') as f:
+    with open(files_path + "frames_list.pkl", 'rb') as f:
         data = pickle.load(f)
 
-    print(len(data))
+    print("train len(data) = " + len(data))
 
     for d in data:
         train_sample = {"image": d.rgb_filename, "depth": d.depth_filename}
@@ -50,8 +46,28 @@ def load_train_filenames():
 
 
 def load_not_none():
-    with open("not_none_data.pkl", 'rb') as f:
+    with open(files_path + "not_none_data.pkl", 'rb') as f:
         data = pickle.load(f)
 
     return data
 
+
+def load_test_filenames():
+    test_data = []
+    with open(files_path + "test_frames_list.pkl", 'rb') as f:
+        data = pickle.load(f)
+
+    print("test len(data) = " + str(len(data)))
+
+    for d in data:
+        test_sample = {"image": d.rgb_filename, "depth": d.depth_filename}
+        test_data.append(test_sample)
+
+    return test_data
+
+
+def load_test_not_none():
+    with open(files_path + "test_not_none_data.pkl", 'rb') as f:
+        data = pickle.load(f)
+
+    return data

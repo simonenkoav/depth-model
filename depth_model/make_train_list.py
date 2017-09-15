@@ -8,7 +8,7 @@ assert (len(sys.argv) == 2)
 path = sys.argv[1]
 
 files = os.listdir(path)
-
+files_path = "files/"
 frames_list = []
 
 for file in files:
@@ -16,7 +16,7 @@ for file in files:
         data = pickle.load(f)
         frames_list = frames_list + data
 
-    with open("my_all_frames_list.pkl", 'wb') as f:
+    with open(files_path + "test_frames_list.pkl", 'wb') as f:
         pickle.dump(frames_list, f, pickle.HIGHEST_PROTOCOL)
 
 # with open("all_frames_list.pkl", 'rb') as f:
